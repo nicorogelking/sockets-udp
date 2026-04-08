@@ -2,7 +2,6 @@ import socket
 import threading
 
 def handle_tcp():
-    # Socket TCP en puerto 6000
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('0.0.0.0', 6000))
@@ -11,24 +10,29 @@ def handle_tcp():
         while True:
             conn, addr = s.accept()
             with conn:
-                print(f"[TCP-EXP] Sesión iniciada desde {addr}")
+                print(f"\n[TCP] Nueva conexión desde {addr}")
+                total_recibido = 0
+                operaciones = 0
                 while True:
-                    # Leemos en trozos pequeños de 1024 para demostrar segmentación
+                    # Leemos de a 1024 bytes (menor al MTU de 1500)
+                    # Esto forzará múltiples lecturas si el mensaje es grande
                     data = conn.recv(1024) 
                     if not data: break
-                    print(f"[TCP-EXP] Fragmento recibido: {len(data)} bytes")
+                    
+                    operaciones += 1
+                    total_recibido += len(data)
+                    print(f"  -> Lectura #{operaciones}: Recibidos {len(data)} bytes.")
+                    print(f"  -> Total acumulado: {total_recibido} bytes.")
 
 def handle_udp():
-    # Socket UDP en el MISMO puerto 6000
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.bind(('0.0.0.0', 6000))
         print("[UDP-EXP] Escuchando en puerto 6000...")
         while True:
-            # Buffer de 4096 para recibir datagramas completos > 1500 bytes
+            # Buffer grande (4096) para recibir el datagrama completo
             data, addr = s.recvfrom(4096) 
-            print(f"[UDP-EXP] Datagrama íntegro recibido: {len(data)} bytes desde {addr}")
+            print(f"\n[UDP] Datagrama recibido desde {addr}")
+            print(f"  -> Tamaño del mensaje: {len(data)} bytes (1 sola operación de lectura).")
 
-# Lanzamos TCP en segundo plano
 threading.Thread(target=handle_tcp, daemon=True).start()
-# Lanzamos UDP en primer plano
 handle_udp()
